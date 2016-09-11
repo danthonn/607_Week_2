@@ -1,0 +1,139 @@
+---
+title: "R_Week_2_Hmk_607_Daniel_Thonn"
+output: html_document
+course: R-607 CUNY MSDA program
+
+---
+
+## Assignment Homework-2-607: SQL & R
+
+### Dataset: SQL & R - Movies
+
+Summary of Assignment
+This assignment involves a Movie Rating Dataset.  Seven Movies are rated by seven reviewers and the results are analyzed.
+
+This Assignment requires the following:
+
+1). MySql
+2). R-Studio
+
+The following R-packages are used:
+1.RMySQL
+2.dplyr
+3.sqldf
+4.ggplot2
+5.downloader
+6.htmlTable
+
+Two csv files are required for input:
+1). Movies.csv
+2). Reviewer.csv
+
+The path for the in put files is: c:\mysqldataf
+
+
+Steps:
+1). run the Movies.sql file
+2). run the R-Studio file: R_607_Week_2_Hmk_SQL_R_Daniel_Thonn.Rmd
+
+
+
+Setting up and Preparing the Environment
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#install.packages("RMySQL")
+#install.packages("dplyr")
+#install.packages("sqldf")
+#install.packages("ggplot2")
+#install.packages("downloader")
+#install.packages("htmlTable")
+library(RMySQL)
+library(dplyr)
+library(sqldf)
+library(ggplot2)
+library(downloader)
+library(htmlTable)
+
+```
+
+
+Load the database tables into R dataframes
+
+
+```{r, echo=TRUE}
+
+#note: put in placeholders for user and password
+mydb = dbConnect(MySQL(), user='dthonn', password='1804', dbname='movies', host='localhost')
+
+# return the movies query below and store the results a dataframe called movies1
+movies1 <- dbGetQuery(mydb, "select movie,movietype,reviewer,score  from movies")
+#list(movies1)
+
+reviewer1 <- dbGetQuery(mydb, "select reviewer,gender,age_bracket  from reviewer")
+#list(reviewer1)
+
+gender1 <- dbGetQuery(mydb, "select m.movietype,r.gender,avg(m.score) from movies m    inner join reviewer r on m.reviewer = r.reviewer group by m.movietype,r.gender order by  m.movietype asc,r.gender asc") 
+list(gender1)
+
+age_bracket1 <- dbGetQuery(mydb, "select m.movietype,r.age_bracket,avg(m.score)
+from movies m
+inner join reviewer r 
+on m.reviewer = r.reviewer
+group by  m.movietype,r.age_bracket
+order by m.movietype asc,r.gender asc")
+list(age_bracket1)
+
+
+movies3 <- aggregate(x=movies1$score, data=movies1, by = list(movies1$movie), FUN=mean)
+list(movies3)
+
+```
+
+Plot and Analyze the data
+
+```{r, echo=TRUE}
+
+## Movies
+# Scatterplot Chart of movies with all scores
+ggplot(movies1, aes(x=movie, y=score)) + geom_point() + theme(axis.text.x=element_text(angle=90, hjust=1))
+
+# Scatterplot Chart of movies with mean of scores
+ggplot(movies3, aes(x=Group.1, y=x)) + geom_point(aes(color = "average score")) + theme(axis.text.x=element_text(angle=90, hjust=1)) + labs(color="Legend")
+
+#Box Plot of Movies and Score
+ggplot(movies1, aes(x = movie, y = score)) + 
+    geom_boxplot() + theme(axis.text.x=element_text(angle=90, hjust=1))
+
+##Reviewer
+list(reviewer1)
+# Scatterplot Chart of reviewers
+ggplot(reviewer1, aes(x=reviewer, y=age_bracket)) + geom_point(aes(color = "age_bracket")) + geom_point(aes(x = reviewer, y = gender,color = "gender")) + theme(axis.text.x=element_text(angle=90, hjust=1)) + labs(color="Legend")
+
+#By Gender
+#list(gender1)
+#names(gender1)
+names(gender1)[3] <- "avg_score"
+gender1_M <- gender1[which(gender1$gender == "M"), ]
+gender1_F <- gender1[which(gender1$gender == "F"), ]
+list (gender1_M)
+ggplot(gender1_M, aes(x=movietype, y=avg_score)) + geom_point(aes(color = "Male")) + geom_point(aes(x =movietype, y = gender1_F$avg_score,color = "Female")) + theme(axis.text.x=element_text(angle=90, hjust=1)) + labs(color="Legend")
+
+#By Age Bracket
+#list(age_bracket1)
+#names(age_bracket1)
+names(age_bracket1)[3] <- "avg_score"
+
+age_bracket1_YA <- age_bracket1[which(age_bracket1$age_bracket == "Young Adult"), ]
+age_bracket1_MA <- age_bracket1[which(age_bracket1$age_bracket == "Middle Age"), ]
+list (age_bracket1_YA)
+list (age_bracket1_MA)
+ggplot(age_bracket1_YA, aes(x=movietype, y=avg_score)) + geom_point(aes(color = "Young Adult")) + geom_point(aes(x =movietype, y = age_bracket1_MA$avg_score,color = "Middle Age")) + theme(axis.text.x=element_text(angle=90, hjust=1)) + labs(color="Legend")
+
+```
+
+Conclustions:
+
+The three most popular movies were Sully, Jason Bourne, and the Light between Oceans.  There was a mix of male and female, and young adults and middle age adults as reviewers. The highest average score in terms of Movie Types were Drama Biography, and Thriller Action.  There were differing results for males and females.  Males preferred Action Adventure, Drama Biography, and Thriller Action.  Females preferred Comedy, and Romance movies.  Middle age reviewers generally scored most movies types higher, except for Action Adventure which Young Adults scored higher.
+
+#EnD
